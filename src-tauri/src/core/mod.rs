@@ -8,6 +8,7 @@ pub mod github_download;
 pub mod github_search;
 pub mod installer;
 pub mod onboarding;
+pub mod skill_files;
 pub mod skill_store;
 pub mod skills_search;
 pub mod sync_engine;

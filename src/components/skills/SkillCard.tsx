@@ -19,6 +19,7 @@ type SkillCardProps = {
   onUpdate: (skill: ManagedSkill) => void
   onDelete: (skillId: string) => void
   onToggleTool: (skill: ManagedSkill, toolId: string) => void
+  onOpenDetail: (skill: ManagedSkill) => void
   t: TFunction
 }
 
@@ -34,6 +35,7 @@ const SkillCard = ({
   onUpdate,
   onDelete,
   onToggleTool,
+  onOpenDetail,
   t,
 }: SkillCardProps) => {
   const typeKey = skill.source_type.toLowerCase()
@@ -79,7 +81,13 @@ const SkillCard = ({
       <div className="skill-icon">{iconNode}</div>
       <div className="skill-main">
         <div className="skill-header-row">
-          <div className="skill-name">{skill.name}</div>
+          <button
+            type="button"
+            className="skill-name clickable"
+            onClick={() => onOpenDetail(skill)}
+          >
+            {skill.name}
+          </button>
         </div>
         {skill.description ? (
           <div className="skill-desc">{skill.description}</div>

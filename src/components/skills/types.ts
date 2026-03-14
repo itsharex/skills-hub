@@ -101,3 +101,8 @@ export type OnlineSkillDto = {
   source: string
   source_url: string
 }
+
+export type SkillFileEntry = {
+  path: string
+  size: number
+}

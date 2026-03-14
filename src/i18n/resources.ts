@@ -235,6 +235,15 @@ export const resources = {
         pendingUpdates: 'Pending Updates',
         allGood: 'All Good',
       },
+      detail: {
+        back: 'Back',
+        files: 'Files',
+        noFiles: 'No files found',
+        loadingFiles: 'Loading files...',
+        loadingContent: 'Loading file content...',
+        readError: 'Failed to read file',
+        fileCount: '{{count}} files',
+      },
       sharedDirConfirm:
         'Note: {{tool}} shares the same global skills directory with {{others}}. This change will affect both. Continue?',
       tools: {
@@ -507,6 +516,15 @@ export const resources = {
         toolsConnected: '已连接工具',
         pendingUpdates: '待更新',
         allGood: '全部正常',
+      },
+      detail: {
+        back: '返回',
+        files: '文件',
+        noFiles: '未找到文件',
+        loadingFiles: '加载文件中...',
+        loadingContent: '加载文件内容中...',
+        readError: '读取文件失败',
+        fileCount: '{{count}} 个文件',
       },
       sharedDirConfirm:
         '提示：{{tool}} 与 {{others}} 共用同一个全局 skills 目录，本次修改会同时影响它们。是否继续？',

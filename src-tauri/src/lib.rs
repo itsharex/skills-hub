@@ -94,6 +94,8 @@ pub fn run() {
             commands::delete_managed_skill,
             commands::get_featured_skills,
             commands::search_skills_online,
+            commands::list_skill_files,
+            commands::read_skill_file,
             commands::cancel_current_operation
         ])
         .run(tauri::generate_context!())

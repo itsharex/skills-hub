@@ -1637,5 +1637,678 @@
     </div>
 </div>
 
+
+<!-- ==========================================
+     SCREEN 5: SKILL DETAIL VIEW (from My Skills)
+     ========================================== -->
+<style>
+    /* ===== Detail View Styles ===== */
+    .detail-view { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+
+    .detail-header {
+        padding: 16px 24px;
+        border-bottom: 1px solid var(--border-subtle);
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .detail-back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        cursor: pointer;
+        background: none;
+        border: none;
+        padding: 4px 8px;
+        border-radius: var(--radius-sm);
+        transition: all 0.2s;
+        font-family: var(--font-ui);
+    }
+    .detail-back-btn:hover { color: var(--accent-primary); background: rgba(37,99,235,0.06); }
+    .detail-back-btn svg { width: 16px; height: 16px; }
+
+    .detail-skill-name {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--text-primary);
+        letter-spacing: -0.02em;
+    }
+    .detail-desc {
+        font-size: 13px;
+        color: var(--text-secondary);
+        line-height: 1.5;
+    }
+    .detail-meta {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-size: 12px;
+        color: var(--text-tertiary);
+    }
+    .detail-meta-item { display: flex; align-items: center; gap: 5px; }
+    .detail-meta-item svg { width: 13px; height: 13px; }
+    .detail-meta-dot { color: var(--border-strong); }
+
+    /* Split pane */
+    .detail-body { flex: 1; display: flex; overflow: hidden; min-height: 0; }
+
+    .detail-file-list {
+        width: 220px;
+        border-right: 1px solid var(--border-subtle);
+        overflow-y: auto;
+        flex-shrink: 0;
+        background: var(--bg-panel);
+        padding: 8px 0;
+    }
+    .file-list-title {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-tertiary);
+        padding: 8px 16px 6px;
+    }
+    .file-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 16px;
+        font-size: 13px;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all 0.15s;
+        border-left: 2px solid transparent;
+    }
+    .file-item:hover { background: var(--bg-element); color: var(--text-primary); }
+    .file-item.active {
+        background: rgba(37,99,235,0.06);
+        color: var(--accent-primary);
+        font-weight: 500;
+        border-left-color: var(--accent-primary);
+    }
+    .file-item svg { width: 14px; height: 14px; flex-shrink: 0; }
+    .file-item-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+    .file-item-size { font-size: 11px; color: var(--text-tertiary); flex-shrink: 0; font-family: var(--font-mono); }
+
+    .detail-file-content { flex: 1; overflow: auto; min-width: 0; background: var(--bg-app); }
+    .file-content-header {
+        padding: 10px 24px;
+        border-bottom: 1px solid var(--border-subtle);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        background: var(--bg-app);
+        z-index: 5;
+    }
+    .file-content-path {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .file-content-path svg { width: 14px; height: 14px; color: var(--text-tertiary); }
+    .file-content-size { font-size: 11px; color: var(--text-tertiary); font-family: var(--font-mono); }
+    .file-content-pre {
+        padding: 16px 24px;
+        font-family: var(--font-mono);
+        font-size: 13px;
+        line-height: 1.7;
+        color: var(--text-primary);
+        white-space: pre-wrap;
+        word-break: break-word;
+        margin: 0;
+        tab-size: 4;
+    }
+
+    /* Loading state */
+    .file-content-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 200px;
+        color: var(--text-tertiary);
+        font-size: 13px;
+        gap: 8px;
+    }
+    .spinner-sm {
+        width: 16px;
+        height: 16px;
+        border: 2px solid var(--border-subtle);
+        border-top-color: var(--accent-primary);
+        border-radius: 50%;
+        animation: detail-spin 0.8s linear infinite;
+    }
+    @keyframes detail-spin { to { transform: rotate(360deg); } }
+
+    /* Clickable skill name in card */
+    .skill-name.clickable { cursor: pointer; transition: color 0.15s; }
+    .skill-name.clickable:hover { color: var(--accent-primary); }
+
+    /* Click indicator */
+    .click-ring {
+        position: absolute;
+        width: 22px; height: 22px;
+        border-radius: 50%;
+        background: rgba(225,29,72,0.12);
+        border: 2px solid #e11d48;
+        animation: ring-pulse 1.5s ease-in-out infinite;
+        pointer-events: none;
+    }
+    @keyframes ring-pulse {
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.3); opacity: 0.5; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    .callout {
+        position: absolute;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: #e11d48;
+        white-space: nowrap;
+    }
+    .callout::before { content: '→ '; font-weight: bold; }
+
+    /* Flow arrow between screens */
+    .flow-arrow-v {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 0;
+        color: #999;
+    }
+    .flow-arrow-v svg { width: 32px; height: 32px; }
+</style>
+
+<!-- 5A: List view - showing clickable skill name -->
+<div class="window-frame" style="position: relative;">
+    <span class="design-label">Screen 5A — Click skill name to open detail</span>
+    <div class="title-bar">
+        <div class="traffic-lights">
+            <div class="traffic-light close"></div>
+            <div class="traffic-light minimize"></div>
+            <div class="traffic-light maximize"></div>
+        </div>
+    </div>
+
+    <div class="app-header">
+        <div class="header-left">
+            <div class="brand-area">
+                <div class="brand-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                </div>
+                <span class="brand-text">Skills Hub</span>
+            </div>
+            <nav class="nav-tabs">
+                <button class="nav-tab active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18V5a2 2 0 00-2-2H5a2 2 0 00-2 2v4z"/><path d="M3 9v10a2 2 0 002 2h14a2 2 0 002-2V9"/></svg>
+                    My Skills
+                </button>
+                <button class="nav-tab">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    Explore
+                </button>
+            </nav>
+        </div>
+        <div class="header-actions">
+            <button class="lang-btn">EN</button>
+            <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></button>
+        </div>
+    </div>
+
+    <div class="app-body">
+        <div class="view-myskills">
+            <div class="toolbar">
+                <div class="toolbar-left">
+                    <span class="toolbar-title">All Skills</span>
+                    <span class="toolbar-count">3</span>
+                </div>
+            </div>
+            <div class="skills-scroll">
+                <!-- Card 1 - click indicator on name -->
+                <div class="skill-row" style="position: relative;">
+                    <div class="skill-icon-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg></div>
+                    <div class="skill-info">
+                        <div class="skill-name-row">
+                            <span class="skill-name clickable" style="color: var(--accent-primary); text-decoration: underline; text-underline-offset: 3px;">react</span>
+                        </div>
+                        <div class="skill-desc">React renderer for json-render that turns JSON specs into React components.</div>
+                        <div class="skill-source-row">
+                            <span class="skill-source">vercel-labs/json-render</span>
+                            <span class="skill-time">&middot; 22 min ago</span>
+                        </div>
+                        <div class="tool-badges">
+                            <span class="tool-badge synced">Cursor</span>
+                            <span class="tool-badge synced">Claude Code</span>
+                            <span class="tool-badge more">+3</span>
+                        </div>
+                    </div>
+                    <div class="row-actions">
+                        <button class="action-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg></button>
+                        <button class="action-btn danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
+                    </div>
+                    <!-- Click indicator -->
+                    <div class="click-ring" style="top: 16px; left: 90px;"></div>
+                    <span class="callout" style="top: 10px; right: -180px;">Click name to view detail</span>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="skill-row">
+                    <div class="skill-icon-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg></div>
+                    <div class="skill-info">
+                        <div class="skill-name-row"><span class="skill-name clickable">commit-message</span></div>
+                        <div class="skill-desc">Generate conventional commit messages with scope and body.</div>
+                        <div class="skill-source-row">
+                            <span class="skill-source">/Users/may/skills/commit-msg</span>
+                            <span class="skill-time">&middot; 1 day ago</span>
+                        </div>
+                        <div class="tool-badges"><span class="tool-badge synced">Cursor</span></div>
+                    </div>
+                    <div class="row-actions">
+                        <button class="action-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg></button>
+                        <button class="action-btn danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
+                    </div>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="skill-row">
+                    <div class="skill-icon-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg></div>
+                    <div class="skill-info">
+                        <div class="skill-name-row"><span class="skill-name clickable">debug-helper</span></div>
+                        <div class="skill-desc">Systematic debugging workflow with root cause analysis.</div>
+                        <div class="skill-source-row">
+                            <span class="skill-source">org/debug-tools</span>
+                            <span class="skill-time">&middot; 3 days ago</span>
+                        </div>
+                        <div class="tool-badges">
+                            <span class="tool-badge synced">Claude Code</span>
+                            <span class="tool-badge synced">Cursor</span>
+                            <span class="tool-badge synced">Windsurf</span>
+                        </div>
+                    </div>
+                    <div class="row-actions">
+                        <button class="action-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg></button>
+                        <button class="action-btn danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Flow Arrow -->
+<div class="flow-arrow-v">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+</div>
+
+
+<!-- ==========================================
+     SCREEN 5B: DETAIL VIEW (SKILL.md selected)
+     ========================================== -->
+<div class="window-frame" style="position: relative;">
+    <span class="design-label">Screen 5B — Skill Detail View (SKILL.md default)</span>
+    <div class="title-bar">
+        <div class="traffic-lights">
+            <div class="traffic-light close"></div>
+            <div class="traffic-light minimize"></div>
+            <div class="traffic-light maximize"></div>
+        </div>
+    </div>
+
+    <div class="app-header">
+        <div class="header-left">
+            <div class="brand-area">
+                <div class="brand-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                </div>
+                <span class="brand-text">Skills Hub</span>
+            </div>
+            <nav class="nav-tabs">
+                <button class="nav-tab active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9h18V5a2 2 0 00-2-2H5a2 2 0 00-2 2v4z"/><path d="M3 9v10a2 2 0 002 2h14a2 2 0 002-2V9"/></svg>
+                    My Skills
+                </button>
+                <button class="nav-tab">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    Explore
+                </button>
+            </nav>
+        </div>
+        <div class="header-actions">
+            <button class="lang-btn">EN</button>
+            <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></button>
+        </div>
+    </div>
+
+    <div class="app-body">
+        <div class="detail-view">
+            <div class="detail-header">
+                <button class="detail-back-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                    Back
+                </button>
+                <div class="detail-skill-name">react</div>
+                <div class="detail-desc">React renderer for json-render that turns JSON specs into React components.</div>
+                <div class="detail-meta">
+                    <span class="detail-meta-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg>
+                        vercel-labs/json-render
+                    </span>
+                    <span class="detail-meta-dot">&middot;</span>
+                    <span class="detail-meta-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        Updated 22 min ago
+                    </span>
+                    <span class="detail-meta-dot">&middot;</span>
+                    <span class="detail-meta-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        4 files
+                    </span>
+                </div>
+            </div>
+
+            <div class="detail-body">
+                <!-- File sidebar -->
+                <div class="detail-file-list">
+                    <div class="file-list-title">Files</div>
+                    <div class="file-item active">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <span class="file-item-name">SKILL.md</span>
+                        <span class="file-item-size">2.4 KB</span>
+                    </div>
+                    <div class="file-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <span class="file-item-name">component-spec.md</span>
+                        <span class="file-item-size">1.8 KB</span>
+                    </div>
+                    <div class="file-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <span class="file-item-name">examples/basic.md</span>
+                        <span class="file-item-size">3.1 KB</span>
+                    </div>
+                    <div class="file-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <span class="file-item-name">examples/advanced.md</span>
+                        <span class="file-item-size">1.1 KB</span>
+                    </div>
+                </div>
+
+                <!-- File content -->
+                <div class="detail-file-content">
+                    <div class="file-content-header">
+                        <span class="file-content-path">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            SKILL.md
+                        </span>
+                        <span class="file-content-size">2.4 KB</span>
+                    </div>
+                    <pre class="file-content-pre"># React Renderer
+
+## Description
+React renderer for json-render that turns JSON specs
+into React components.
+
+## When to use
+- Working with @json-render/react
+- Building React UIs from JSON specifications
+- Creating component catalogs from JSON definitions
+
+## Usage
+```jsx
+import { render } from '@json-render/react';
+
+const spec = {
+  type: 'Card',
+  props: { title: 'Hello' },
+  children: [
+    { type: 'Text', props: { value: 'World' } }
+  ]
+};
+
+const App = () => render(spec);
+```
+
+## Configuration
+- `strict`: Enable strict type checking (default: true)
+- `components`: Custom component registry map
+- `fallback`: Fallback component for unknown types
+
+## Supported Components
+Button, Card, Text, Input, List, Grid, Modal, Tabs</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Flow Arrow -->
+<div class="flow-arrow-v">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+</div>
+
+
+<!-- ==========================================
+     SCREEN 5C: DETAIL VIEW (switched file)
+     ========================================== -->
+<div class="window-frame" style="position: relative;">
+    <span class="design-label">Screen 5C — Detail View (switched to another file)</span>
+    <div class="title-bar">
+        <div class="traffic-lights">
+            <div class="traffic-light close"></div>
+            <div class="traffic-light minimize"></div>
+            <div class="traffic-light maximize"></div>
+        </div>
+    </div>
+
+    <div class="app-header">
+        <div class="header-left">
+            <div class="brand-area">
+                <div class="brand-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                </div>
+                <span class="brand-text">Skills Hub</span>
+            </div>
+            <nav class="nav-tabs">
+                <button class="nav-tab active">My Skills</button>
+                <button class="nav-tab">Explore</button>
+            </nav>
+        </div>
+        <div class="header-actions">
+            <button class="lang-btn">EN</button>
+            <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg></button>
+        </div>
+    </div>
+
+    <div class="app-body">
+        <div class="detail-view">
+            <div class="detail-header">
+                <button class="detail-back-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                    Back
+                </button>
+                <div class="detail-skill-name">react</div>
+                <div class="detail-desc">React renderer for json-render that turns JSON specs into React components.</div>
+                <div class="detail-meta">
+                    <span class="detail-meta-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 00-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0020 4.77 5.07 5.07 0 0019.91 1S18.73.65 16 2.48a13.38 13.38 0 00-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 005 4.77a5.44 5.44 0 00-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 009 18.13V22"/></svg>
+                        vercel-labs/json-render
+                    </span>
+                    <span class="detail-meta-dot">&middot;</span>
+                    <span class="detail-meta-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        Updated 22 min ago
+                    </span>
+                    <span class="detail-meta-dot">&middot;</span>
+                    <span class="detail-meta-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        4 files
+                    </span>
+                </div>
+            </div>
+
+            <div class="detail-body">
+                <div class="detail-file-list">
+                    <div class="file-list-title">Files</div>
+                    <div class="file-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <span class="file-item-name">SKILL.md</span>
+                        <span class="file-item-size">2.4 KB</span>
+                    </div>
+                    <div class="file-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <span class="file-item-name">component-spec.md</span>
+                        <span class="file-item-size">1.8 KB</span>
+                    </div>
+                    <div class="file-item active">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <span class="file-item-name">examples/basic.md</span>
+                        <span class="file-item-size">3.1 KB</span>
+                    </div>
+                    <div class="file-item">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <span class="file-item-name">examples/advanced.md</span>
+                        <span class="file-item-size">1.1 KB</span>
+                    </div>
+                </div>
+
+                <div class="detail-file-content">
+                    <div class="file-content-header">
+                        <span class="file-content-path">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            examples/basic.md
+                        </span>
+                        <span class="file-content-size">3.1 KB</span>
+                    </div>
+                    <pre class="file-content-pre"># Basic Examples
+
+## Simple Card
+```json
+{
+  "type": "Card",
+  "props": {
+    "title": "Welcome",
+    "variant": "outlined"
+  },
+  "children": [
+    {
+      "type": "Text",
+      "props": { "value": "Hello, World!" }
+    }
+  ]
+}
+```
+
+## Button Group
+```json
+{
+  "type": "ButtonGroup",
+  "props": { "direction": "horizontal" },
+  "children": [
+    {
+      "type": "Button",
+      "props": { "label": "Save", "variant": "primary" }
+    },
+    {
+      "type": "Button",
+      "props": { "label": "Cancel", "variant": "secondary" }
+    }
+  ]
+}
+```
+
+## Form with Input
+```json
+{
+  "type": "Form",
+  "props": { "onSubmit": "handleSubmit" },
+  "children": [
+    {
+      "type": "Input",
+      "props": {
+        "name": "email",
+        "label": "Email Address",
+        "type": "email",
+        "required": true
+      }
+    }
+  ]
+}
+```</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Flow Arrow -->
+<div class="flow-arrow-v">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+</div>
+
+
+<!-- ==========================================
+     SCREEN 5D: DETAIL VIEW (loading state)
+     ========================================== -->
+<div class="window-frame" style="position: relative; height: 420px;">
+    <span class="design-label">Screen 5D — Detail View (loading state)</span>
+    <div class="title-bar">
+        <div class="traffic-lights">
+            <div class="traffic-light close"></div>
+            <div class="traffic-light minimize"></div>
+            <div class="traffic-light maximize"></div>
+        </div>
+    </div>
+
+    <div class="app-header">
+        <div class="header-left">
+            <div class="brand-area">
+                <div class="brand-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                </div>
+                <span class="brand-text">Skills Hub</span>
+            </div>
+            <nav class="nav-tabs">
+                <button class="nav-tab active">My Skills</button>
+                <button class="nav-tab">Explore</button>
+            </nav>
+        </div>
+    </div>
+
+    <div class="app-body">
+        <div class="detail-view">
+            <div class="detail-header">
+                <button class="detail-back-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                    Back
+                </button>
+                <div class="detail-skill-name">react</div>
+            </div>
+
+            <div class="detail-body">
+                <div class="detail-file-list">
+                    <div class="file-list-title">Files</div>
+                    <div class="file-content-loading" style="height: 120px;">
+                        <div class="spinner-sm"></div>
+                        Loading...
+                    </div>
+                </div>
+                <div class="detail-file-content">
+                    <div class="file-content-loading">
+                        <div class="spinner-sm"></div>
+                        Loading file content...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

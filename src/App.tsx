@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Toaster, toast } from 'sonner'
 import ExplorePage from './components/skills/ExplorePage'
 import FilterBar from './components/skills/FilterBar'
+import SkillDetailView from './components/skills/SkillDetailView'
 import Header from './components/skills/Header'
 import LoadingOverlay from './components/skills/LoadingOverlay'
 import SkillsList from './components/skills/SkillsList'
@@ -80,7 +81,8 @@ function App() {
   } | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<'updated' | 'name'>('updated')
-  const [activeView, setActiveView] = useState<'myskills' | 'explore'>('myskills')
+  const [activeView, setActiveView] = useState<'myskills' | 'explore' | 'detail'>('myskills')
+  const [detailSkill, setDetailSkill] = useState<ManagedSkill | null>(null)
   const [addModalTab, setAddModalTab] = useState<'local' | 'git'>('git')
   const [featuredSkills, setFeaturedSkills] = useState<FeaturedSkillDto[]>([])
   const [featuredLoading, setFeaturedLoading] = useState(false)
@@ -551,9 +553,22 @@ function App() {
       if (view === 'explore') {
         loadFeaturedSkills()
       }
+      if (view === 'myskills') {
+        setDetailSkill(null)
+      }
     },
     [loadFeaturedSkills],
   )
+
+  const handleOpenDetail = useCallback((skill: ManagedSkill) => {
+    setDetailSkill(skill)
+    setActiveView('detail')
+  }, [])
+
+  const handleBackToList = useCallback(() => {
+    setDetailSkill(null)
+    setActiveView('myskills')
+  }, [])
 
   const handleExploreFilterChange = useCallback(
     (value: string) => {
@@ -1741,7 +1756,15 @@ function App() {
       />
 
       <main className="skills-main">
-        {activeView === 'myskills' ? (
+        {activeView === 'detail' && detailSkill ? (
+          <SkillDetailView
+            skill={detailSkill}
+            onBack={handleBackToList}
+            invokeTauri={invokeTauri}
+            formatRelative={formatRelative}
+            t={t}
+          />
+        ) : activeView === 'myskills' ? (
           <div className="dashboard-stack">
             <FilterBar
               sortBy={sortBy}
@@ -1764,6 +1787,7 @@ function App() {
               onUpdateSkill={handleUpdateSkill}
               onDeleteSkill={handleDeletePrompt}
               onToggleTool={handleToggleToolForSkill}
+              onOpenDetail={handleOpenDetail}
               t={t}
             />
           </div>
