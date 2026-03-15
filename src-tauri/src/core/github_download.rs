@@ -73,9 +73,8 @@ fn download_dir_recursive(
     }
     let resp = req
         .send()
-        .with_context(|| format!("request GitHub contents: {}", url))?
-        .error_for_status()
-        .with_context(|| format!("GitHub API error for: {}", url))?;
+        .with_context(|| format!("request GitHub contents: {}", url))?;
+    let resp = check_github_response(resp, &url)?;
 
     let items: Vec<GithubContent> = resp
         .json()
@@ -99,11 +98,11 @@ fn download_dir_recursive(
                     if let Some(t) = token {
                         file_req = file_req.header("Authorization", format!("Bearer {}", t));
                     }
-                    let bytes = file_req
+                    let file_resp = file_req
                         .send()
-                        .with_context(|| format!("download file: {}", item.path))?
-                        .error_for_status()
-                        .with_context(|| format!("download file HTTP error: {}", item.path))?
+                        .with_context(|| format!("download file: {}", item.path))?;
+                    let file_resp = check_github_response(file_resp, &item.path)?;
+                    let bytes = file_resp
                         .bytes()
                         .with_context(|| format!("read file bytes: {}", item.path))?;
 
@@ -130,6 +129,40 @@ fn download_dir_recursive(
     }
 
     Ok(())
+}
+
+/// Check a GitHub API response for rate-limit errors and surface a helpful message.
+fn check_github_response(
+    resp: reqwest::blocking::Response,
+    context: &str,
+) -> Result<reqwest::blocking::Response> {
+    let status = resp.status();
+    if status.is_success() {
+        return Ok(resp);
+    }
+    if status.as_u16() == 403 {
+        let reset_hint = resp
+            .headers()
+            .get("x-ratelimit-reset")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.parse::<i64>().ok())
+            .map(|ts| {
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs() as i64;
+                let wait_mins = ((ts - now).max(0) + 59) / 60; // round up
+                format!("RATE_LIMITED|{}", wait_mins)
+            })
+            .unwrap_or_else(|| "403 Forbidden".to_string());
+        anyhow::bail!("{}", reset_hint);
+    }
+    // For other errors, use the standard error_for_status logic.
+    Err(anyhow::anyhow!(
+        "GitHub API error {} for: {}",
+        status,
+        context
+    ))
 }
 
 /// Check if a GitHub URL with subpath can use the fast API download path.
@@ -202,5 +235,86 @@ mod tests {
             Some("path"),
         );
         assert_eq!(result, None);
+    }
+
+    #[test]
+    fn check_github_response_passes_success() {
+        let mut server = mockito::Server::new();
+        let _m = server
+            .mock("GET", "/ok")
+            .with_status(200)
+            .with_body("ok")
+            .create();
+        let client = Client::new();
+        let resp = client.get(format!("{}/ok", server.url())).send().unwrap();
+        assert!(check_github_response(resp, "test").is_ok());
+    }
+
+    #[test]
+    fn check_github_response_extracts_rate_limit_reset() {
+        let mut server = mockito::Server::new();
+        let reset_ts = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            + 600; // 10 minutes from now
+        let _m = server
+            .mock("GET", "/limited")
+            .with_status(403)
+            .with_header("x-ratelimit-reset", &reset_ts.to_string())
+            .with_body("rate limited")
+            .create();
+        let client = Client::new();
+        let resp = client
+            .get(format!("{}/limited", server.url()))
+            .send()
+            .unwrap();
+        let err = check_github_response(resp, "test").unwrap_err();
+        let msg = format!("{:#}", err);
+        assert!(msg.contains("RATE_LIMITED|"), "got: {}", msg);
+        // Should contain a number of minutes (around 10)
+        let mins: i64 = msg
+            .strip_prefix("RATE_LIMITED|")
+            .unwrap()
+            .trim()
+            .parse()
+            .unwrap();
+        assert!((9..=11).contains(&mins), "expected ~10 mins, got {}", mins);
+    }
+
+    #[test]
+    fn check_github_response_handles_403_without_reset_header() {
+        let mut server = mockito::Server::new();
+        let _m = server
+            .mock("GET", "/forbidden")
+            .with_status(403)
+            .with_body("forbidden")
+            .create();
+        let client = Client::new();
+        let resp = client
+            .get(format!("{}/forbidden", server.url()))
+            .send()
+            .unwrap();
+        let err = check_github_response(resp, "test").unwrap_err();
+        let msg = format!("{:#}", err);
+        assert!(msg.contains("403"), "got: {}", msg);
+    }
+
+    #[test]
+    fn check_github_response_handles_other_errors() {
+        let mut server = mockito::Server::new();
+        let _m = server
+            .mock("GET", "/notfound")
+            .with_status(404)
+            .with_body("not found")
+            .create();
+        let client = Client::new();
+        let resp = client
+            .get(format!("{}/notfound", server.url()))
+            .send()
+            .unwrap();
+        let err = check_github_response(resp, "test").unwrap_err();
+        let msg = format!("{:#}", err);
+        assert!(msg.contains("404"), "got: {}", msg);
     }
 }

@@ -160,6 +160,18 @@ pub fn install_git_skill<R: tauri::Runtime>(
                         subpath
                     );
                 }
+                if let Some(rest) = err_msg.strip_prefix("RATE_LIMITED|") {
+                    let mins: i64 = rest.trim().parse().unwrap_or(0);
+                    if mins > 0 {
+                        anyhow::bail!(
+                            "GitHub API 频率限制已触发，约 {} 分钟后重置。可在设置中配置 GitHub Token 以提升限额。",
+                            mins
+                        );
+                    }
+                    anyhow::bail!(
+                        "GitHub API 频率限制已触发。可在设置中配置 GitHub Token 以提升限额。"
+                    );
+                }
                 if err_msg.contains("403") || err_msg.contains("Forbidden") {
                     anyhow::bail!("GitHub API 访问被拒绝（可能触发了频率限制）。请稍后再试。");
                 }
