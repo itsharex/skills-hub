@@ -22,14 +22,16 @@ const NewToolsModal = ({
 
   return (
     <div className="modal-backdrop" onClick={onLater}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-title">{t('newToolsTitle')}</div>
+      <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <div className="modal-header">
+          <div className="modal-title">{t('newToolsTitle')}</div>
+        </div>
         <div className="modal-body">
           {t('newToolsBody', {
             tools: toolsLabelText,
           })}
         </div>
-        <div className="modal-actions">
+        <div className="modal-footer">
           <button className="btn btn-secondary" onClick={onLater} disabled={loading}>
             {t('later')}
           </button>

@@ -1028,11 +1028,15 @@ pub fn install_git_skill_from_selection<R: tauri::Runtime>(
     let parsed = parse_github_url(repo_url);
     let user_provided_name = name.is_some();
     let mut display_name = name.unwrap_or_else(|| {
-        subpath
-            .rsplit('/')
-            .next()
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| derive_name_from_repo_url(&parsed.clone_url))
+        if subpath == "." {
+            derive_name_from_repo_url(&parsed.clone_url)
+        } else {
+            subpath
+                .rsplit('/')
+                .next()
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| derive_name_from_repo_url(&parsed.clone_url))
+        }
     });
 
     let central_dir = resolve_central_repo_path(app, store)?;
